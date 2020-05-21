@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>DeepDreams</title>
+    <style type="text/css">
+        body{
+            font-family: "Helvetica";
+            font-size: 16px;
+        }
+
+        ::selection {
+            background-color: #6600AA;
+            color: white;
+        }
+
+        ::-moz-selection {
+            background-color: #6600AA;
+            color: white;
+        }
+
+
+        h2{
+            color: #6600AA;
+        }
+
+        #cover{
+            width: 100%;
+            height: 300px;
+        }
+
+        #cover h1{
+            position: absolute;
+            font-size: 70px;
+            top: 80px;
+            left: 20%;
+            color: #6600AA;
+        }
+
+        #cover img{
+            object-fit: cover;
+            width: 100%;
+            height: 300px;
+            filter: grayscale(100%) opacity(50%);
+        }
+
+        #cover img:hover{
+            filter: grayscale(0%) opacity(100%);
+        }
+
+        .introWrapper{
+            width: 60%;
+            margin: auto;
+
+        }
+
+        .gallery{
+            width: 60%;
+            margin: auto;
+            display: grid;
+            grid-template-columns: auto auto;
+            grid-gap: 50px;
+        }
+
+        .galleryItem{
+        }
+
+        .galleryItem img{
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .greyImg img{
+            filter: grayscale(100%);
+        }
+
+        .lightBox{
+            position: fixed;
+            top: 0%;
+            left: 0%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255, .7);
+            display: none;
+            background-repeat: no-repeat;
+            background-size: contain;
+            text-align: right;
+
+        }
+        .lightBox p{
+            color: #6600AA;
+            position: fixed;
+            top: -10%;
+            right: 3%;
+            font-size: 100px;
+            -webkit-text-stroke-width: 2px;
+            -webkit-text-stroke-color: #fff;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="cover"></div>
+    <div class="lightBox">
+        <p>X</p>
+    </div>
+
+
+</body>
+
+<script>
+    let showCaption;
+    let grayImages;
+
+    const isGDoc = (file) => {
+        return file.metadata.mimeType === "application/vnd.google-apps.document";
+    }
+
+    const isImage = (file) => {
+        return file.metadata.mimeType.indexOf("image/") > -1;
+    }
+
+    const lightBox = document.querySelector(".lightBox");
+    lightBox.onclick = () => {
+                lightBox.style.display = "none";
+
+            };
+
+
+
+    (async() => {
+        const SETTINGS_URL = "https://dp.isiaurbino.net/api/x-publishing/workshop-coding/marcop/settings";
+        const settings = await fetch(SETTINGS_URL).then(r => r.json());
+        const sheet = settings.data[0];
+        updateSettings( sheet );
+        if (grayImages) {
+            document.body.className = "greyImg";
+        }
+        const API_URL = "https://dp.isiaurbino.net/api/x-publishing/workshop-coding/marcop";
+        const res = await fetch(API_URL).then(r => r.json());
+
+
+        res.data.forEach((file) => {
+
+            if( isGDoc(file) ){
+                if(file.content.images.length == 0){
+                    createIntro(file);
+                }else{
+                    createGallery(file);
+                }
+            } else if( isImage(file) ){
+                createCover(file);
+            }
+
+        })
+
+
+
+    })();
+
+
+
+        function createIntro( gdoc ){
+
+        const introWrapper = document.createElement( "div" );
+        introWrapper.className = "introWrapper"
+        introWrapper.innerHTML = gdoc.content.text;
+        document.body.append(introWrapper);
+
+    }
+
+
+
+    function createCover( file ){
+
+        const img = document.createElement("img");
+        img.src = file.content.originalUrl;
+        document.getElementById("cover").appendChild(img);
+        const imgTitle = file.content.title;
+        const title = document.createElement("h1");
+        title.innerHTML = imgTitle;
+        document.getElementById("cover").appendChild(title);
+
+    }
+
+
+
+    function createGallery( gdoc ){
+
+        const grid = document.createElement( "div" );
+        grid.className = "gallery";
+
+        for (var i = 0; i < gdoc.content.images.length; i++) {
+            var image = gdoc.content.images[i];
+
+            const cell = document.createElement( "div" );
+            cell.className = "galleryItem";
+
+            const img = document.createElement("img");
+            img.src = image.originalUrl;
+            let imageUrl = image.originalUrl;
+            img.onclick = () => {
+                /*console.log(image);*/
+                console.log("click");
+                lightBox.style.display = "block";
+                lightBox.style.backgroundImage = "url(" + imageUrl + ")";
+
+            };
+
+            cell.append(img);
+            if (showCaption) {
+                const caption = document.createElement("p");
+                caption.innerHTML = image.alt;
+                cell.append(caption);
+            }
+
+            grid.append(cell);
+
+        }
+        document.body.append(grid);
+
+
+    }
+
+
+
+    function updateSettings( gspr ){
+        const sheet = gspr.content.sheets[0];
+        console.log(sheet.rows[1][1]);
+        if (sheet.rows[0][1] != null) {
+            grayImages = true;
+        }else{
+            grayImages = false;
+        }
+
+        if (sheet.rows[1][1] != null) {
+            showCaption = true;
+        }else{
+            showCaption = false;
+        }
+    }
+</script>
+</html>
